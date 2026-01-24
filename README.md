@@ -1,6 +1,10 @@
 # Advanced Zone Helper
 
-A KiCad plugin that creates zones from selected shapes, including ring zones between nested outlines.
+A KiCad plugin that creates zones from selected shapes, including ring zones and multi-hole zones between nested outlines.
+
+## Demo
+
+https://github.com/user-attachments/assets/ab84076c-92c4-4066-be21-093f74fc34f7
 
 ## Features
 
@@ -26,15 +30,6 @@ A KiCad plugin that creates zones from selected shapes, including ring zones bet
    - Linux: `~/.local/share/kicad/8.0/scripting/plugins/`
    - macOS: `~/Library/Preferences/kicad/8.0/scripting/plugins/`
 3. Restart KiCad
-
-## Usage
-
-1. Draw shapes that form closed loops (circles, arcs, lines, rectangles)
-2. Select the shapes (Ctrl+Click or box select)
-3. Run from **Tools → External Plugins → Advanced Zone Helper** or the toolbar button
-4. Check the zones to create in the dialog
-5. Configure settings (layer, net, priority, clearance)
-6. Click "Create Zones"
 
 ## Troubleshooting
 
