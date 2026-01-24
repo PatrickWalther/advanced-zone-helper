@@ -21,9 +21,9 @@ This document provides a detailed mathematical explanation of the algorithms use
 
 A polygon $P$ is represented as an ordered sequence of $n$ vertices:
 
-$$
+```math
 P = \{(x_0, y_0), (x_1, y_1), \ldots, (x_{n-1}, y_{n-1})\}
-$$
+```
 
 For a closed polygon, we define $`P_n = P_0`$ (the last vertex connects back to the first).
 
@@ -41,9 +41,9 @@ For a closed polygon, we define $`P_n = P_0`$ (the last vertex connects back to 
 
 The **signed area** of a simple polygon $P$ with vertices $`(x_0, y_0), (x_1, y_1), \ldots, (x_{n-1}, y_{n-1})`$ is computed using the Shoelace formula (also known as Gauss's area formula). We call it "signed" because the result can be positive or negative depending on whether vertices are ordered counter-clockwise or clockwise—this sign encodes the winding direction.
 
-$$
+```math
 A_{signed} = \frac{1}{2} \sum_{i=0}^{n-1} (x_i \cdot y_{i+1} - x_{i+1} \cdot y_i)
-$$
+```
 
 This is the **cross product** of consecutive position vectors, equivalent to the 2×2 determinant:
 
@@ -57,21 +57,21 @@ where indices are taken modulo $n$ (i.e., $`(x_n, y_n) = (x_0, y_0)`$).
 
 The Shoelace formula derives from **Green's theorem**. For a region $D$ bounded by curve $C$:
 
-$$
+```math
 \iint_D dA = \oint_C x \, dy = -\oint_C y \, dx
-$$
+```
 
 Using the symmetric form:
 
-$$
+```math
 A_{signed} = \frac{1}{2} \oint_C (x \, dy - y \, dx)
-$$
+```
 
 For a polygon with straight edges, the contour integral becomes a discrete sum over each edge $i$:
 
-$$
+```math
 A_{signed} = \frac{1}{2} \sum_{i=0}^{n-1} (x_i \cdot y_{i+1} - x_{i+1} \cdot y_i)
-$$
+```
 
 **Key insight:** The integral preserves sign—traversing the boundary counter-clockwise yields positive area, clockwise yields negative. This is what makes $`A_{signed}`$ useful for detecting winding direction.
 
@@ -115,9 +115,9 @@ Cast a ray from point $Q$ in any direction (typically along the positive x-axis:
 
 **Decision Rule:**
 
-$$
+```math
 \text{Point } Q \text{ is inside } P \iff \text{crossing count is odd}
-$$
+```
 
 This follows from the **Jordan Curve Theorem**: any simple closed curve divides the plane into exactly two regions (inside and outside), and any path from inside to outside must cross the boundary.
 
@@ -125,20 +125,11 @@ This follows from the **Jordan Curve Theorem**: any simple closed curve divides 
 
 For an edge from $`(x_i, y_i)`$ to $`(x_j, y_j)`$, the ray $`y = y_q`$ crosses this edge if:
 
-1. **Vertical span condition**: The edge straddles the ray's y-coordinate:
-   $$
-   (y_i > y_q) \neq (y_j > y_q)
-   $$
+1. **Vertical span condition**: The edge straddles the ray's y-coordinate: $`(y_i > y_q) \neq (y_j > y_q)`$
 
-2. **Intersection point**: The x-coordinate of intersection is:
-   $$
-   x_{intersect} = x_i + \frac{(y_q - y_i)(x_j - x_i)}{y_j - y_i}
-   $$
+2. **Intersection point**: The x-coordinate of intersection is: $`x_{intersect} = x_i + \frac{(y_q - y_i)(x_j - x_i)}{y_j - y_i}`$
 
-3. **Ray direction**: The intersection is to the right of $Q$:
-   $$
-   x_q < x_{intersect}
-   $$
+3. **Ray direction**: The intersection is to the right of $Q$: $`x_q < x_{intersect}`$
 
 ### 3.4 Implementation
 
@@ -175,33 +166,33 @@ function point_in_polygon(Q, P):
 
 Polygon $`P_{inner}`$ is **contained within** polygon $`P_{outer}`$ if:
 
-$$
+```math
 \forall \, p \in P_{inner} : p \in \text{interior}(P_{outer})
-$$
+```
 
 ### 4.2 Practical Test
 
-The algorithm verifies containment by checking that **all vertices** of $P_{inner}$ lie inside $P_{outer}$:
+The algorithm verifies containment by checking that **all vertices** of $`P_{inner}`$ lie inside $`P_{outer}`$:
 
-$$
+```math
 \text{contains}(P_{outer}, P_{inner}) = \bigwedge_{i=0}^{m-1} \text{point\_in\_polygon}(P_{inner}[i], P_{outer})
-$$
+```
 
-where $m$ is the number of vertices in $P_{inner}$.
+where $m$ is the number of vertices in $`P_{inner}`$.
 
 ### 4.3 Area Ratio Filtering
 
 To prevent false positives from nearly-identical polygons (due to numerical precision), an **area ratio test** is applied:
 
-$$
+```math
 r = \frac{A(P_{inner})}{A(P_{outer})}
-$$
+```
 
 If $r > 0.99$, the polygons are considered identical and containment is rejected:
 
-$$
+```math
 \text{valid\_containment} = \text{all\_points\_inside} \land (r \leq 0.99)
-$$
+```
 
 ---
 
@@ -218,9 +209,9 @@ Given a set of $n$ polygons $\{P_0, P_1, \ldots, P_{n-1}\}$, we construct a **di
 
 The graph is stored as an adjacency list:
 
-$$
+```math
 \text{containment}[i] = \{j \mid P_i \text{ contains } P_j\}
-$$
+```
 
 ### 5.3 Construction Algorithm
 
@@ -248,16 +239,16 @@ function build_containment_graph(polygons):
 
 ### 6.1 Direct vs. Indirect Containment
 
-A polygon $P_j$ is a **direct child** (immediate hole) of $P_i$ if:
+A polygon $`P_j`$ is a **direct child** (immediate hole) of $`P_i`$ if:
 
-1. $P_i$ contains $P_j$
-2. There is no intermediate polygon $P_k$ such that $P_i$ contains $P_k$ and $P_k$ contains $P_j$
+1. $`P_i`$ contains $`P_j`$
+2. There is no intermediate polygon $`P_k`$ such that $`P_i`$ contains $`P_k`$ and $`P_k`$ contains $`P_j`$
 
 Formally:
 
-$$
+```math
 \text{direct\_child}(i, j) = (j \in \text{containment}[i]) \land \neg \exists k : (k \in \text{containment}[i]) \land (j \in \text{containment}[k])
-$$
+```
 
 ### 6.2 Transitivity Elimination
 
@@ -307,15 +298,15 @@ Based on the direct children relationships, polygons are classified into zone ty
 
 ### 7.2 Formal Definition
 
-Let $C(i) = \text{direct\_children}[i]$:
+Let $`C(i) = \text{direct\_children}[i]`$:
 
-$$
+```math
 \text{zone\_type}(P_i) = \begin{cases}
-\text{Simple} & \text{if } |C(i)| = 0 \\
-\text{Ring} & \text{if } |C(i)| = 1 \\
+\text{Simple} & \text{if } |C(i)| = 0 \\\
+\text{Ring} & \text{if } |C(i)| = 1 \\\
 \text{MultiHole} & \text{if } |C(i)| \geq 2
 \end{cases}
-$$
+```
 
 ---
 
@@ -323,19 +314,19 @@ $$
 
 ### 8.1 Ring Zone Area
 
-For a ring zone with outer boundary $P_{outer}$ and inner boundary $P_{inner}$:
+For a ring zone with outer boundary $`P_{outer}`$ and inner boundary $`P_{inner}`$:
 
-$$
+```math
 A_{ring} = A(P_{outer}) - A(P_{inner})
-$$
+```
 
 ### 8.2 Multi-Hole Zone Area
 
-For a zone with outer boundary $P_{outer}$ and $k$ holes $\{H_1, H_2, \ldots, H_k\}$:
+For a zone with outer boundary $`P_{outer}`$ and $k$ holes $`\{H_1, H_2, \ldots, H_k\}`$:
 
-$$
+```math
 A_{multi} = A(P_{outer}) - \sum_{i=1}^{k} A(H_i)
-$$
+```
 
 ### 8.3 General Formula (Signed Area Approach)
 
@@ -345,9 +336,9 @@ Using the winding direction convention where:
 
 The total area can be computed as:
 
-$$
+```math
 A_{total} = \sum_{i} A_{signed}(P_i)
-$$
+```
 
 where polygons with CCW winding contribute positively and CW polygons subtract their area.
 
@@ -368,11 +359,4 @@ Where:
 - $m$ = vertices in inner polygon  
 - $p$ = number of polygons
 
----
 
-## References
-
-1. **Shoelace Formula**: Meister, L.A.G. (1769). "Generalia de genesi figurarum planarum et inde pendentibus"
-2. **Ray Casting**: Shimrat, M. (1962). "Algorithm 112: Position of point relative to polygon"
-3. **Jordan Curve Theorem**: Jordan, C. (1887). "Cours d'analyse de l'École Polytechnique"
-4. **Green's Theorem**: Green, G. (1828). "An Essay on the Application of Mathematical Analysis"
