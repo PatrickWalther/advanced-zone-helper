@@ -45,11 +45,11 @@ $$
 A_{signed} = \frac{1}{2} \sum_{i=0}^{n-1} (x_i \cdot y_{i+1} - x_{i+1} \cdot y_i)
 $$
 
-This is equivalent to summing the 2×2 determinants of consecutive vertex pairs:
+This is the **cross product** of consecutive position vectors, equivalent to the 2×2 determinant:
 
-$$
-\det \begin{pmatrix} x_i & x_{i+1} \\ y_i & y_{i+1} \end{pmatrix} = x_i \cdot y_{i+1} - x_{i+1} \cdot y_i
-$$
+```math
+\begin{vmatrix} x_i & x_{i+1} \\\ y_i & y_{i+1} \end{vmatrix} = x_i \cdot y_{i+1} - x_{i+1} \cdot y_i
+```
 
 where indices are taken modulo $n$ (i.e., $(x_n, y_n) = (x_0, y_0)$).
 
