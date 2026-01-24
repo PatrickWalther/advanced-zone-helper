@@ -309,6 +309,35 @@ class ZoneBuilderSWIG:
             logger.error(f"Error creating zone: {e}", exc_info=True)
             return None
 
+    def _signed_area(self, pts: List[tuple]) -> float:
+        """Calculate signed area of polygon using shoelace formula.
+        
+        Positive = CCW winding, Negative = CW winding (in standard coords).
+        """
+        a = 0
+        n = len(pts)
+        for i in range(n):
+            x1, y1 = pts[i]
+            x2, y2 = pts[(i + 1) % n]
+            a += x1 * y2 - x2 * y1
+        return 0.5 * a
+
+    def _winding_sign(self, pts: List[tuple]) -> int:
+        """Get winding direction: +1 for CCW, -1 for CW, 0 for degenerate."""
+        a = self._signed_area(pts)
+        return 1 if a > 0 else (-1 if a < 0 else 0)
+
+    def _ensure_winding(self, pts: List[tuple], desired_sign: int) -> List[tuple]:
+        """Ensure polygon has the desired winding direction."""
+        s = self._winding_sign(pts)
+        if s == 0:
+            return pts
+        return list(reversed(pts)) if s != desired_sign else pts
+
+    def _rotate_list(self, pts: List[tuple], start_idx: int) -> List[tuple]:
+        """Rotate list so element at start_idx becomes first."""
+        return pts[start_idx:] + pts[:start_idx]
+
     def _build_bridged_polygon(self, outer_iu: List[tuple], 
                                   holes_mm: List[List[tuple]]) -> List[tuple]:
         """Build a single polygon with bridges connecting outer to all holes.
@@ -316,73 +345,92 @@ class ZoneBuilderSWIG:
         KiCAD zones with holes use zero-width "slits" connecting the outer
         boundary to each hole, making it topologically a single closed polygon.
         
-        For multiple holes, we insert each hole into the outer boundary at
-        the closest point, creating a slit for each hole.
+        This implementation properly handles winding direction:
+        - Normalizes outer boundary to a consistent winding
+        - Normalizes holes to OPPOSITE winding
+        - Bridges from the ORIGINAL outer contour (not previously inserted holes)
         """
         if not holes_mm or len(holes_mm) == 0:
             return outer_iu
-        
-        # Convert all holes to IU
+
+        # Normalize OUTER winding to a deterministic sign (+1 = CCW)
+        outer = list(outer_iu)
+        outer_sign = self._winding_sign(outer)
+        if outer_sign == 0:
+            logger.warning("Outer polygon has zero area; returning as-is")
+            return outer
+
+        if outer_sign < 0:
+            outer = list(reversed(outer))
+            outer_sign = 1
+
+        desired_hole_sign = -outer_sign  # Holes must be opposite winding
+
+        # Sanitize + normalize HOLES to opposite winding
         holes_iu = []
         for hole_mm in holes_mm:
-            hole_iu = self._sanitize_points_iu(hole_mm)
-            if len(hole_iu) >= 3:
-                holes_iu.append(hole_iu)
-        
+            hole = self._sanitize_points_iu(hole_mm)
+            if len(hole) < 3:
+                continue
+            if self._winding_sign(hole) == 0:
+                logger.warning("Skipping degenerate hole (zero area)")
+                continue
+            hole = self._ensure_winding(hole, desired_hole_sign)
+            holes_iu.append(hole)
+
         if not holes_iu:
             logger.warning("No valid holes after sanitization")
-            return outer_iu
-        
-        logger.debug(f"Building bridged polygon with {len(holes_iu)} holes")
-        
-        # For each hole, find the best insertion point on the current polygon
-        # Start with the outer boundary
-        result = list(outer_iu)
-        
-        for hole_idx, hole_iu in enumerate(holes_iu):
-            # Find closest pair between current result polygon and this hole
-            min_dist = float('inf')
-            result_bridge_idx = 0
-            hole_bridge_idx = 0
-            
-            for i, (rx, ry) in enumerate(result):
-                for j, (hx, hy) in enumerate(hole_iu):
-                    dist = (rx - hx)**2 + (ry - hy)**2
-                    if dist < min_dist:
-                        min_dist = dist
-                        result_bridge_idx = i
-                        hole_bridge_idx = j
-            
-            bridge_result_pt = result[result_bridge_idx]
-            bridge_hole_pt = hole_iu[hole_bridge_idx]
-            
-            logger.debug(f"Hole {hole_idx}: bridge at result[{result_bridge_idx}] <-> hole[{hole_bridge_idx}]")
-            
-            # Build insertion sequence for this hole:
-            # bridge_result_pt -> bridge_hole_pt -> hole CW -> bridge_hole_pt -> bridge_result_pt
+            return outer
+
+        logger.debug(f"Building bridged polygon with {len(holes_iu)} holes (outer sign={outer_sign})")
+
+        # Build result incrementally, but ALWAYS bridge from the OUTER contour
+        result = list(outer)
+
+        # Mapping from outer vertex index -> current index in result list
+        outer_to_result_idx = list(range(len(outer)))
+
+        for hole_idx, hole in enumerate(holes_iu):
+            # Find closest vertex pair using OUTER only (not result with previous holes)
+            min_dist = float("inf")
+            outer_bridge_i = 0
+            hole_bridge_j = 0
+
+            for i, (ox, oy) in enumerate(outer):
+                for j, (hx, hy) in enumerate(hole):
+                    d = (ox - hx) ** 2 + (oy - hy) ** 2
+                    if d < min_dist:
+                        min_dist = d
+                        outer_bridge_i = i
+                        hole_bridge_j = j
+
+            bridge_outer_pt = outer[outer_bridge_i]
+            bridge_hole_pt = hole[hole_bridge_j]
+
+            # Rotate hole so traversal starts at bridge point, then traverse FORWARD
+            # (hole is already in opposite winding, so forward traversal is correct)
+            hole_rot = self._rotate_list(hole, hole_bridge_j)
+
+            # Build insertion:
+            # outer_bridge -> bridge_hole -> (around hole in normalized direction) -> bridge_hole -> outer_bridge
             insertion = []
-            
-            # Bridge to hole
             insertion.append(bridge_hole_pt)
-            
-            # Traverse hole in opposite direction (CW if outer is CCW)
-            # Go BACKWARDS through hole indices to reverse winding
-            n_hole = len(hole_iu)
-            for k in range(1, n_hole):
-                idx = (hole_bridge_idx - k) % n_hole
-                insertion.append(hole_iu[idx])
-            
-            # Bridge back
-            insertion.append(bridge_hole_pt)
-            insertion.append(bridge_result_pt)
-            
-            # Insert the hole sequence after the bridge point in result
-            new_result = result[:result_bridge_idx + 1] + insertion + result[result_bridge_idx + 1:]
-            result = new_result
-            
-            logger.debug(f"After hole {hole_idx}: {len(result)} points")
-        
-        logger.debug(f"Built bridged polygon: {len(outer_iu)} outer + {len(holes_iu)} holes = {len(result)} total points")
+            insertion.extend(hole_rot[1:])      # rest of hole (already starts at bridge point)
+            insertion.append(bridge_hole_pt)    # close around the hole
+            insertion.append(bridge_outer_pt)   # bridge back to outer
+
+            # Insert right after the chosen outer vertex in *current* result
+            insert_at = outer_to_result_idx[outer_bridge_i] + 1
+            result[insert_at:insert_at] = insertion
+
+            # Update mapping for subsequent outer vertices
+            delta = len(insertion)
+            for k in range(outer_bridge_i + 1, len(outer_to_result_idx)):
+                outer_to_result_idx[k] += delta
+
+            logger.debug(f"Hole {hole_idx}: bridged at outer[{outer_bridge_i}] -> hole[{hole_bridge_j}], result now {len(result)} pts")
+
+        logger.debug(f"Built bridged polygon: {len(outer)} outer + {len(holes_iu)} holes = {len(result)} total points")
         return result
 
     def _get_layer_id(self, layer_name: str) -> int:

@@ -28,8 +28,8 @@ jobs:
           cp __init__.py package/plugins/
           cp -r src package/plugins/
           
-          # Copy toolbar icon (24x24) to plugins directory
-          cp icons/advanced_zone_helper.png package/plugins/
+          # Copy toolbar icon (24x24) to plugins directory (preserve icons/ subfolder)
+          cp -r icons package/plugins/
           
           # Create 64x64 icon for PCM (or copy if already correct size)
           cp icons/advanced_zone_helper.png package/resources/icon.png
@@ -42,32 +42,23 @@ jobs:
 
       - name: Create metadata.json for package
         run: |
-          cat > package/metadata.json << 'EOF'
-          {
-              "$schema": "https://go.kicad.org/pcm/schemas/v1",
-              "name": "Advanced Zone Helper",
-              "description": "Create zones from selected shapes, including ring zones between nested outlines",
-              "description_full": "A KiCad plugin that creates zones from selected graphic shapes.\n\nFeatures:\n- Automatically detects closed loops from selected lines, arcs, and circles\n- Creates ring zones between nested outlines (e.g., between two concentric circles)\n- Supports multi-hole zones (outer boundary with multiple inner cutouts)\n- Configure layer, net, priority, and clearance settings\n- Preview detected zones before creation\n\nUsage:\n1. Draw shapes that form closed loops\n2. Select the shapes\n3. Run the plugin from Tools → External Plugins\n4. Select which zones to create and configure settings\n5. Click Create Zones",
-              "identifier": "com-github-advanced-zone-helper",
-              "type": "plugin",
-              "author": {
-                  "name": "Patrick",
-                  "contact": {
-                      "github": "https://github.com/${{ github.repository }}"
-                  }
-              },
-              "license": "MIT",
-              "resources": {
-                  "homepage": "https://github.com/${{ github.repository }}"
-              },
-              "versions": [
-                  {
-                      "version": "${{ steps.version.outputs.VERSION }}",
-                      "status": "stable",
-                      "kicad_version": "7.0"
-                  }
-              ]
-          }
+          # Use repo metadata.json and update version
+          python3 << 'EOF'
+          import json
+          
+          with open('metadata.json', 'r') as f:
+              metadata = json.load(f)
+          
+          # Update version info
+          version = "${{ steps.version.outputs.VERSION }}"
+          metadata['versions'] = [{
+              "version": version,
+              "status": "stable",
+              "kicad_version": "7.0"
+          }]
+          
+          with open('package/metadata.json', 'w') as f:
+              json.dump(metadata, f, indent=4)
           EOF
 
       - name: Create PCM ZIP package

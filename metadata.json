@@ -15,12 +15,5 @@
     "resources": {
         "homepage": "https://github.com/PatrickWalther/advanced-zone-helper"
     },
-    "versions": [
-        {
-            "version": "1.0.0",
-            "status": "stable",
-            "kicad_version": "7.0",
-            "download_url": "https://github.com/PatrickWalther/advanced-zone-helper/releases/download/v1.0.0/advanced-zone-helper-v1.0.0-pcm.zip"
-        }
-    ]
+    "versions": []
 }
