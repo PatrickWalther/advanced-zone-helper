@@ -20,16 +20,16 @@ jobs:
 
       - name: Create PCM package structure
         run: |
-          mkdir -p package/plugins/advanced-zone-helper
+          mkdir -p package/plugins
           mkdir -p package/resources
           
-          # Copy plugin files to plugins directory
-          cp zone_helper.py package/plugins/advanced-zone-helper/
-          cp __init__.py package/plugins/advanced-zone-helper/
-          cp -r src package/plugins/advanced-zone-helper/
+          # Copy plugin files directly to plugins directory (no subdirectory!)
+          cp zone_helper.py package/plugins/
+          cp __init__.py package/plugins/
+          cp -r src package/plugins/
           
           # Copy toolbar icon (24x24) to plugins directory
-          cp icons/advanced_zone_helper.png package/plugins/advanced-zone-helper/
+          cp icons/advanced_zone_helper.png package/plugins/
           
           # Create 64x64 icon for PCM (or copy if already correct size)
           cp icons/advanced_zone_helper.png package/resources/icon.png
@@ -38,7 +38,7 @@ jobs:
           find package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           
           # Remove test files
-          rm -f package/plugins/advanced-zone-helper/test_*.py 2>/dev/null || true
+          rm -f package/plugins/test_*.py 2>/dev/null || true
 
       - name: Create metadata.json for package
         run: |
