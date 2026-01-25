@@ -118,6 +118,21 @@ function polygon_area(P):
 
 **Note:** The implementation returns `|area|` (absolute value) for area calculations, but the sign can be preserved for winding direction determination.
 
+#### 2.3 Why Winding Direction Matters for Zone Creation
+
+When creating zones with holes, the outer boundary and holes must have **opposite winding directions**. The algorithm:
+
+1. **Normalizes the outer contour** to positive signed area (CCW in standard coordinates)
+2. **Normalizes each hole** to negative signed area (CW — opposite of outer)
+
+KiCAD zones don't support separate hole contours via the SWIG API. Instead, holes are encoded using **zero-width bridges (slits)** connecting the outer boundary to each hole, creating a single continuous polygon:
+
+```
+Outer → bridge → Hole (traverse once) → bridge back → continue Outer
+```
+
+If winding directions match, the fill engine misinterprets the hole as solid material or produces self-intersections after bridging.
+
 ---
 
 ### 3. Point-in-Polygon Test (Ray Casting Algorithm)
