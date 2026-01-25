@@ -1,11 +1,14 @@
 """Geometry processing module for Advanced Zone Helper."""
 
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import Tuple, List, NamedTuple
 import math
 
 
-Point = Tuple[float, float]
+class Point(NamedTuple):
+    """A 2D point."""
+    x: float
+    y: float
 
 
 @dataclass

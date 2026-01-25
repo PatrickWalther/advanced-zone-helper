@@ -1,6 +1,6 @@
-# Advanced Zone Helper
+# Advanced Zone Helper (IPC API Version)
 
-A KiCad plugin that creates zones from selected shapes, including ring zones and multi-hole zones between nested outlines.
+A KiCad 9.0+ plugin that creates zones from selected shapes, including ring zones and multi-hole zones between nested outlines. This version uses the new KiCad IPC API.
 
 ## Demo
 
@@ -8,45 +8,87 @@ https://github.com/user-attachments/assets/ab84076c-92c4-4066-be21-093f74fc34f7
 
 ## Features
 
-- Automatically detects closed loops from selected lines, arcs, bezier elements, and circles
+- Automatically detects closed loops from selected lines, arcs, bezier curves, circles, and polygons
 - Creates ring zones between nested outlines (e.g., between two concentric circles)
 - Supports multi-hole zones (outer boundary with multiple inner cutouts)
 - Configure layer, net, priority, and clearance settings
-- Preview detected zones before creation
+- Interactive zone selection and configuration dialog with preview
+
+## Requirements
+
+- **KiCad 9.0 or later** (uses the IPC API)
+- Python 3.9+
+- IPC API must be enabled in KiCad preferences
 
 ## Installation
 
 ### Option 1: KiCad Plugin Manager (Recommended)
 
-1. Download the latest `advanced-zone-helper-vX.X.X-pcm.zip` from [Releases](../../releases)
+1. Download the latest `advanced-zone-helper-ipc-vX.X.X-pcm.zip` from [Releases](../../releases)
 2. In KiCad, go to **Plugin and Content Manager**
 3. Click **Install from File...** and select the downloaded ZIP
+4. Enable the IPC API in **Preferences → Plugins** if not already enabled
+5. Restart KiCad
 
 ### Option 2: Manual Installation
 
-1. Download the latest `advanced-zone-helper-vX.X.X.zip` from [Releases](../../releases)
-2. Extract to your KiCad plugins directory:
-   - Windows: `%USERPROFILE%\Documents\KiCad\8.0\scripting\plugins\`
-   - Linux: `~/.local/share/kicad/8.0/scripting/plugins/`
-   - macOS: `~/Library/Preferences/kicad/8.0/scripting/plugins/`
+1. Download and extract to your KiCad plugins directory:
+   - Windows: `%USERPROFILE%\Documents\KiCad\9.0\plugins\`
+   - Linux: `~/.local/share/kicad/9.0/plugins/`
+   - macOS: `~/Library/Preferences/kicad/9.0/plugins/`
+2. Enable the IPC API in **Preferences → Plugins**
 3. Restart KiCad
+
+## Usage
+
+1. Draw graphic shapes (rectangles, circles, arcs, lines, polygons) that form closed boundaries
+2. Select the shapes you want to convert to zones
+3. Click the **Advanced Zone Helper** toolbar button
+4. In the dialog:
+   - Check the zones you want to create
+   - Configure layer, net, and other settings
+   - Preview the zones in the right panel
+5. Click **Create Zones**
 
 ## Troubleshooting
 
-- **Plugin not appearing**: Check the plugin is in the correct directory and restart KiCad
-- **No shapes found**: Ensure you selected graphic shapes (not footprints/tracks)
-- **No closed loops found**: Endpoints must connect within 0.001mm tolerance
+- **Plugin not appearing**: Ensure IPC API is enabled in Preferences → Plugins and restart KiCad
+- **No shapes found**: Select graphic shapes (not footprints/tracks) before running
+- **No closed loops found**: Endpoints must connect within 0.01mm tolerance
+- **Zone creation failed**: Check the log file `zone_helper_ipc.log` in the plugin directory
 
-## Requirements
+### Missing Dependencies Error
 
-- KiCad 7.0 or later
+KiCad 9.0 automatically creates a virtual environment for each IPC plugin and attempts to install dependencies. However, this automatic installation may fail silently.
 
-No additional Python packages required - the plugin uses only KiCad's built-in Python environment.
+If you see a "Missing required package" error, manually install the dependencies:
+
+**Windows:**
+```cmd
+"%LOCALAPPDATA%\KiCad\9.0\python-environments\com.github.advanced-zone-helper-ipc\Scripts\pip.exe" install kicad-python
+```
+
+**macOS:**
+```bash
+~/Library/Caches/KiCad/9.0/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
+```
+
+**Linux:**
+```bash
+~/.cache/kicad/9.0/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
+```
+
+Alternatively, run the `setup_dependencies.py` script included in the plugin folder:
+```bash
+python setup_dependencies.py
+```
+
+If the virtual environment doesn't exist yet, run the plugin once from KiCad (it will fail but create the venv), then run the pip command above.
 
 ## How the Algorithm Works
 
 1. **[Convert loops to polygons](#1-polygon-representation)** — Discretize curves (arcs, circles, Bézier) into point sequences
-2. **[Calculate signed area](#2-signed-area-and-winding-direction-shoelace-formula)** — Use the Shoelace formula to get area and winding direction (CCW = exterior, CW = hole)
+2. **[Calculate signed area](#2-signed-area-and-winding-direction-shoelace-formula)** — Use the Shoelace formula to get area and winding direction
 3. **[Test point-in-polygon](#3-point-in-polygon-test-ray-casting-algorithm)** — Ray casting to determine if points lie inside a polygon
 4. **[Detect containment](#4-polygon-containment-detection)** — Check if all vertices of one polygon lie inside another
 5. **[Build containment graph](#5-containment-graph-construction)** — Create a directed graph of which polygons contain which
@@ -118,20 +160,12 @@ function polygon_area(P):
 
 **Note:** The implementation returns `|area|` (absolute value) for area calculations, but the sign can be preserved for winding direction determination.
 
-#### 2.3 Why Winding Direction Matters for Zone Creation
+#### 2.4 Why Winding Direction Matters for Zone Creation
 
-When creating zones with holes, the outer boundary and holes must have **opposite winding directions**. The algorithm:
+When creating zones with holes, the outer boundary and holes must have **matching winding directions** for the KiCad IPC API. The algorithm:
 
-1. **Normalizes the outer contour** to positive signed area (CCW in standard coordinates)
-2. **Normalizes each hole** to negative signed area (CW — opposite of outer)
-
-KiCAD zones don't support separate hole contours via the SWIG API. Instead, holes are encoded using **zero-width bridges (slits)** connecting the outer boundary to each hole, creating a single continuous polygon:
-
-```
-Outer → bridge → Hole (traverse once) → bridge back → continue Outer
-```
-
-If winding directions match, the fill engine misinterprets the hole as solid material or produces self-intersections after bridging.
+1. **Detects the outer contour's winding direction**
+2. **Normalizes each hole** to match the outer contour's winding
 
 ---
 
@@ -159,17 +193,17 @@ function point_in_polygon(Q, P):
     n = length(P)
     inside = false
     j = n - 1
-    
+
     for i = 0 to n-1:
         xi, yi = P[i]
         xj, yj = P[j]
-        
-        if ((yi > y) ≠ (yj > y)) and 
+
+        if ((yi > y) ≠ (yj > y)) and
            (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
             inside = ¬inside
-        
+
         j = i
-    
+
     return inside
 ```
 
@@ -209,12 +243,12 @@ Given $n$ polygons, we build a **containment graph** where an edge from $i$ to $
 function build_containment_graph(polygons):
     n = length(polygons)
     containment = [[] for i in range(n)]
-    
+
     for i = 0 to n-1:
         for j = 0 to n-1:
             if i ≠ j and polygon_contains_polygon(polygons[i], polygons[j]):
                 containment[i].append(j)
-    
+
     return containment
 ```
 
@@ -230,12 +264,12 @@ Since containment is transitive (if $A$ contains $B$ and $B$ contains $C$, then 
 function find_direct_children(containment):
     n = length(containment)
     direct_children = [[] for i in range(n)]
-    
+
     for i = 0 to n-1:
         for j in containment[i]:
             if is_direct_containment(i, j, containment):
                 direct_children[i].append(j)
-    
+
     return direct_children
 
 function is_direct_containment(outer, inner, containment):

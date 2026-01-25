@@ -1,11 +1,11 @@
-"""Zone selection dialog with preview for SWIG-based plugin."""
+"""Zone selection dialog with preview for IPC-based plugin."""
 
 import logging
 import wx
 from typing import List, Optional
 from src.geometry import SimpleZone, RingZone, MultiHoleZone, LineSegment, Arc, Circle, Bezier
 from src.geometry.arc_approximator import ArcApproximator
-from src.zone_builder_swig import ZoneSettings
+from src.geometry.zone_builder_ipc import ZoneSettings
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class ZonePreviewPanel(wx.Panel):
         self.zones = zones
         self.arc_approximator = arc_approximator
         self.selected_indices = set()
-        
+
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -43,7 +43,7 @@ class ZonePreviewPanel(wx.Panel):
         """Paint the preview."""
         dc = wx.AutoBufferedPaintDC(self)
         gc = wx.GraphicsContext.Create(dc)
-        
+
         gc.SetBrush(wx.Brush(wx.Colour(40, 40, 40)))
         width, height = self.GetSize()
         gc.DrawRectangle(0, 0, width, height)
@@ -100,7 +100,7 @@ class ZonePreviewPanel(wx.Panel):
                 continue
 
             screen_points = [transform(p) for p in points]
-            
+
             # Get color for this zone
             base_color = self.ZONE_COLORS[i % len(self.ZONE_COLORS)]
 
@@ -117,7 +117,7 @@ class ZonePreviewPanel(wx.Panel):
 
             gc.SetPen(gc.CreatePen(wx.Pen(stroke_color, stroke_width)))
             gc.SetBrush(gc.CreateBrush(wx.Brush(fill_color)))
-            
+
             # Create path for polygon
             path = gc.CreatePath()
             path.MoveToPoint(screen_points[0][0], screen_points[0][1])
@@ -133,14 +133,14 @@ class ZonePreviewPanel(wx.Panel):
                     inner_screen = [transform(p) for p in inner_points]
                     gc.SetBrush(gc.CreateBrush(wx.Brush(wx.Colour(40, 40, 40, 255))))
                     gc.SetPen(gc.CreatePen(wx.Pen(stroke_color, stroke_width)))
-                    
+
                     hole_path = gc.CreatePath()
                     hole_path.MoveToPoint(inner_screen[0][0], inner_screen[0][1])
                     for pt in inner_screen[1:]:
                         hole_path.AddLineToPoint(pt[0], pt[1])
                     hole_path.CloseSubpath()
                     gc.DrawPath(hole_path)
-            
+
             # For multi-hole zones, draw all inner holes (cut out)
             elif isinstance(zone, MultiHoleZone):
                 for inner_loop in zone.inner_loops:
@@ -149,7 +149,7 @@ class ZonePreviewPanel(wx.Panel):
                         inner_screen = [transform(p) for p in inner_points]
                         gc.SetBrush(gc.CreateBrush(wx.Brush(wx.Colour(40, 40, 40, 255))))
                         gc.SetPen(gc.CreatePen(wx.Pen(stroke_color, stroke_width)))
-                        
+
                         hole_path = gc.CreatePath()
                         hole_path.MoveToPoint(inner_screen[0][0], inner_screen[0][1])
                         for pt in inner_screen[1:]:
@@ -197,7 +197,7 @@ class ZonePreviewPanel(wx.Panel):
         return points
 
 
-class ZoneDialogSWIG(wx.Dialog):
+class ZoneDialogIPC(wx.Dialog):
     """Dialog for selecting zones to create and configuring settings."""
 
     ID_OK = wx.ID_OK
@@ -318,14 +318,12 @@ class ZoneDialogSWIG(wx.Dialog):
 
     def _populate_layers(self):
         """Populate layer choice with all layers, copper first."""
-        import pcbnew
-        
         # Copper layers first (most common for zones)
         copper_layers = [
-            "F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu", 
+            "F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu",
             "In5.Cu", "In6.Cu", "B.Cu"
         ]
-        
+
         # Technical layers
         technical_layers = [
             "F.Adhes", "B.Adhes",
@@ -340,29 +338,36 @@ class ZoneDialogSWIG(wx.Dialog):
             "User.1", "User.2", "User.3", "User.4",
             "User.5", "User.6", "User.7", "User.8", "User.9"
         ]
-        
+
         # Add copper layers first
         for layer in copper_layers:
             self.layer_choice.Append(layer)
-        
+
         # Add separator
         self.layer_choice.Append("─" * 20)
-        
+
         # Add technical layers
         for layer in technical_layers:
             self.layer_choice.Append(layer)
-        
+
         self.layer_choice.SetSelection(0)
 
     def _populate_nets(self):
-        """Populate net choice."""
+        """Populate net choice using IPC API."""
         self.net_choice.Append("(none)")
         try:
-            netinfo = self.board.GetNetInfo()
-            for net in netinfo.NetsByName():
-                if net:
-                    # Convert wxString to Python string
-                    self.net_choice.Append(str(net))
+            # Try to get nets from IPC board
+            if hasattr(self.board, 'get_nets'):
+                nets = self.board.get_nets()
+                for net in nets:
+                    net_name = net.name if hasattr(net, 'name') else str(net)
+                    if net_name:
+                        self.net_choice.Append(net_name)
+            elif hasattr(self.board, 'nets'):
+                for net in self.board.nets:
+                    net_name = net.name if hasattr(net, 'name') else str(net)
+                    if net_name:
+                        self.net_choice.Append(net_name)
         except Exception as e:
             logger.error(f"Error populating nets: {e}")
         self.net_choice.SetSelection(0)

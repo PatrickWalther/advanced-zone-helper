@@ -1,19 +1,26 @@
 {
-    "$schema": "https://go.kicad.org/pcm/schemas/v1",
-    "name": "Advanced Zone Helper",
-    "description": "Create zones from selected shapes, including ring zones between nested outlines",
-    "description_full": "A KiCad plugin that creates zones from selected graphic shapes.\n\nFeatures:\n- Automatically detects closed loops from selected lines, arcs, and circles\n- Creates ring zones between nested outlines (e.g., between two concentric circles)\n- Supports multi-hole zones (outer boundary with multiple inner cutouts)\n- Configure layer, net, priority, and clearance settings\n- Preview detected zones before creation\n\nUsage:\n1. Draw shapes that form closed loops\n2. Select the shapes\n3. Run the plugin from Tools → External Plugins\n4. Select which zones to create and configure settings\n5. Click Create Zones",
-    "identifier": "com-github-advanced-zone-helper",
-    "type": "plugin",
-    "author": {
-        "name": "Patrick Walther",
-        "contact": {
-            "github": "https://github.com/PatrickWalther/advanced-zone-helper"
-        }
-    },
-    "license": "MIT",
-    "resources": {
-        "homepage": "https://github.com/PatrickWalther/advanced-zone-helper"
-    },
-    "versions": []
+  "$schema": "https://go.kicad.org/pcm/schemas/v1",
+  "name": "Advanced Zone Helper",
+  "description": "Create zones from selected shapes, including ring and multi-hole zones",
+  "description_full": "A KiCad plugin that creates zones from selected graphic shapes. Supports simple zones, ring zones (annular regions between nested outlines), and multi-hole zones (outer boundary with multiple inner cutouts). Features automatic closed loop detection from lines, arcs, bezier curves, circles, and polygons.",
+  "identifier": "com.github.advanced-zone-helper-ipc",
+  "type": "plugin",
+  "author": {
+    "name": "Patrick Walther",
+    "contact": {
+      "github": "https://github.com/PatrickWalther"
+    }
+  },
+  "license": "MIT",
+  "resources": {
+    "homepage": "https://github.com/PatrickWalther/advanced-zone-helper-ipc"
+  },
+  "versions": [
+    {
+      "version": "${VERSION}",
+      "status": "stable",
+      "kicad_version": "9.0",
+      "runtime": "ipc"
+    }
+  ]
 }

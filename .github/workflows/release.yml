@@ -2,113 +2,67 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
+    tags: ['v*']
 
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Create PCM package structure
+      - name: Install dependencies
         run: |
-          mkdir -p package/plugins
-          mkdir -p package/resources
-          
-          # Copy plugin files directly to plugins directory (no subdirectory!)
-          cp zone_helper.py package/plugins/
-          cp __init__.py package/plugins/
-          cp -r src package/plugins/
-          
-          # Copy toolbar icon (24x24) to plugins directory (preserve icons/ subfolder)
-          cp -r icons package/plugins/
-          
-          # Create 64x64 icon for PCM (or copy if already correct size)
-          cp icons/advanced_zone_helper.png package/resources/icon.png
-          
-          # Remove __pycache__ directories
-          find package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          
-          # Remove test files
-          rm -f package/plugins/test_*.py 2>/dev/null || true
+          python -m pip install --upgrade pip
+          pip install pytest
 
-      - name: Create metadata.json for package
-        run: |
-          # Use repo metadata.json and update version
-          python3 << 'EOF'
-          import json
-          
-          with open('metadata.json', 'r') as f:
-              metadata = json.load(f)
-          
-          # Update version info
-          version = "${{ steps.version.outputs.VERSION }}"
-          metadata['versions'] = [{
-              "version": version,
-              "status": "stable",
-              "kicad_version": "7.0"
-          }]
-          
-          with open('package/metadata.json', 'w') as f:
-              json.dump(metadata, f, indent=4)
-          EOF
+      - name: Run tests
+        run: pytest tests/ -v
 
-      - name: Create PCM ZIP package
-        run: |
-          cd package
-          zip -r ../advanced-zone-helper-v${{ steps.version.outputs.VERSION }}-pcm.zip .
+  release:
+    needs: test
+    runs-on: ubuntu-latest
 
-      - name: Create manual install ZIP
-        run: |
-          mkdir -p manual-install/advanced-zone-helper
-          cp zone_helper.py manual-install/advanced-zone-helper/
-          cp __init__.py manual-install/advanced-zone-helper/
-          cp -r src manual-install/advanced-zone-helper/
-          cp -r icons manual-install/advanced-zone-helper/
-          find manual-install -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          rm -f manual-install/advanced-zone-helper/test_*.py 2>/dev/null || true
-          cd manual-install
-          zip -r ../advanced-zone-helper-v${{ steps.version.outputs.VERSION }}.zip .
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Calculate SHA256
-        id: sha256
-        run: |
-          echo "PCM_SHA256=$(sha256sum advanced-zone-helper-v${{ steps.version.outputs.VERSION }}-pcm.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "MANUAL_SHA256=$(sha256sum advanced-zone-helper-v${{ steps.version.outputs.VERSION }}.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+      - name: Create PCM package
+        run: python build_pcm.py ${{ github.ref_name }}
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            advanced-zone-helper-v${{ steps.version.outputs.VERSION }}-pcm.zip
-            advanced-zone-helper-v${{ steps.version.outputs.VERSION }}.zip
+          files: dist/advanced-zone-helper-ipc-${{ github.ref_name }}-pcm.zip
           body: |
-            ## Advanced Zone Helper v${{ steps.version.outputs.VERSION }}
-            
-            ### Installation
-            
-            #### Option 1: KiCad Plugin Manager (Recommended)
-            1. Download `advanced-zone-helper-v${{ steps.version.outputs.VERSION }}-pcm.zip`
-            2. In KiCad, go to **Plugin and Content Manager**
-            3. Click **Install from File...** and select the downloaded ZIP
-            
-            #### Option 2: Manual Installation
-            1. Download `advanced-zone-helper-v${{ steps.version.outputs.VERSION }}.zip`
-            2. Extract to your KiCad plugins directory:
-               - Windows: `%USERPROFILE%\Documents\KiCad\8.0\scripting\plugins\`
-               - Linux: `~/.local/share/kicad/8.0/scripting/plugins/`
-               - macOS: `~/Library/Preferences/kicad/8.0/scripting/plugins/`
-            3. Restart KiCad
-            
-            ### Checksums
-            - PCM package SHA256: `${{ steps.sha256.outputs.PCM_SHA256 }}`
-            - Manual install SHA256: `${{ steps.sha256.outputs.MANUAL_SHA256 }}`
-          generate_release_notes: true
+            # Advanced Zone Helper IPC ${{ github.ref_name }}
+
+            KiCad 9.0+ IPC API version - create zones from selected shapes
+
+            ## Installation
+            1. Download the PCM package ZIP file below
+            2. Open KiCad → Plugin and Content Manager → Install from File
+            3. Select the downloaded ZIP file
+            4. Restart KiCad
+            5. Enable IPC API in Preferences → Plugins (if not already enabled)
+
+            ## Features
+            - Create zones from selected graphic shapes
+            - Support for simple zones, ring zones (with holes), and multi-hole zones
+            - Automatic loop detection from disconnected shapes
+            - Interactive zone selection and configuration dialog
+
+            ## Requirements
+            - KiCad 9.0+
+            - Python 3.9+
+            - wxPython 4.2+ (auto-installed on Windows/macOS)
+
+            ## Troubleshooting
+            If you see a "Missing required package" error, KiCad's automatic dependency installation may have failed. Run `setup_dependencies.py` from the plugin folder or see README.md for manual installation instructions.
+
+            ## Documentation
+            See README.md in the repository for detailed usage instructions.

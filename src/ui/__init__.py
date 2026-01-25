@@ -1,1 +1,1 @@
-"""UI module for Advanced Zone Helper."""
+"""UI components for Advanced Zone Helper."""

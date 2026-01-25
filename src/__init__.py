@@ -1,3 +1,2 @@
-"""Advanced Zone Helper - Source package."""
-
-__version__ = "1.0.0"
+"""Advanced Zone Helper IPC - KiCad 9.0+ plugin."""
+__version__ = "2.0.0"

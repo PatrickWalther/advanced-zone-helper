@@ -1,0 +1,30 @@
+{
+  "$schema": "https://go.kicad.org/api/schemas/v1",
+  "identifier": "com.github.advanced-zone-helper-ipc",
+  "name": "Advanced Zone Helper",
+  "description": "Create zones from selected shapes, including ring zones and multi-hole zones",
+  "version": "${VERSION}",
+  "author": {
+    "name": "Patrick Walther",
+    "contact": {
+      "github": "https://github.com/PatrickWalther/advanced-zone-helper-ipc"
+    }
+  },
+  "license": "MIT",
+  "runtime": {
+    "type": "python",
+    "min_version": "3.11"
+  },
+  "actions": [
+    {
+      "identifier": "create_zones",
+      "name": "Create Zones from Shapes",
+      "description": "Create zones from selected graphic shapes",
+      "entrypoint": "create_zones.py",
+      "show-button": true,
+      "scopes": ["pcb"],
+      "icons-light": ["icons/icon.png"],
+      "icons-dark": ["icons/icon.png"]
+    }
+  ]
+}
