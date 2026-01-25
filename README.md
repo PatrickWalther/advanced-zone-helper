@@ -1,6 +1,6 @@
-# Advanced Zone Helper (IPC API Version)
+# Advanced Zone Helper (IPC API)
 
-A KiCad 9.0+ plugin that creates zones from selected shapes, including ring zones and multi-hole zones between nested outlines. This version uses the new KiCad IPC API.
+A KiCad 9.0+ plugin that creates zones from selected shapes, including ring zones and multi-hole zones between nested outlines.
 
 ## Demo
 
