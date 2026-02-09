@@ -13,7 +13,7 @@
   "license": "MIT",
   "runtime": {
     "type": "python",
-    "min_version": "3.11"
+    "min_version": "3.9"
   },
   "actions": [
     {

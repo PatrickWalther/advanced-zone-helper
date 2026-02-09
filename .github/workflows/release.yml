@@ -42,7 +42,7 @@ jobs:
             ## Requirements
             - KiCad 9.0+
             - Python 3.9+
-            - wxPython 4.2+ (auto-installed on Windows/macOS)
+            - KiCad IPC plugin dependencies (`kicad-python`, optionally `wxPython` if missing from bundle)
 
             ## Troubleshooting
             If you see a "Missing required package" error, KiCad's automatic dependency installation may have failed. Run `setup_dependencies.py` from the plugin folder or see README.md for manual installation instructions.

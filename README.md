@@ -33,9 +33,9 @@ https://github.com/user-attachments/assets/ab84076c-92c4-4066-be21-093f74fc34f7
 ### Option 2: Manual Installation
 
 1. Download and extract to your KiCad plugins directory:
-   - Windows: `%USERPROFILE%\Documents\KiCad\9.0\plugins\`
-   - Linux: `~/.local/share/kicad/9.0/plugins/`
-   - macOS: `~/Library/Preferences/kicad/9.0/plugins/`
+   - Windows: `%USERPROFILE%\Documents\KiCad\<kicad-version>\plugins\`
+   - Linux: `~/.local/share/kicad/<kicad-version>/plugins/`
+   - macOS: `~/Library/Preferences/kicad/<kicad-version>/plugins/`
 2. Enable the IPC API in **Preferences → Plugins**
 3. Restart KiCad
 
@@ -59,31 +59,34 @@ https://github.com/user-attachments/assets/ab84076c-92c4-4066-be21-093f74fc34f7
 
 ### Missing Dependencies Error
 
-KiCad 9.0 automatically creates a virtual environment for each IPC plugin and attempts to install dependencies. However, this automatic installation may fail silently.
+KiCad automatically creates a virtual environment for each IPC plugin and attempts to install dependencies. However, this automatic installation may fail silently.
 
 If you see a "Missing required package" error, manually install the dependencies:
 
 **Windows:**
 ```cmd
-"%LOCALAPPDATA%\KiCad\9.0\python-environments\com.github.advanced-zone-helper-ipc\Scripts\pip.exe" install kicad-python
+"%LOCALAPPDATA%\KiCad\<kicad-version>\python-environments\com.github.advanced-zone-helper-ipc\Scripts\pip.exe" install kicad-python
 ```
 
 **macOS:**
 ```bash
-~/Library/Caches/KiCad/9.0/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
+~/Library/Caches/KiCad/<kicad-version>/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
 ```
 
 **Linux:**
 ```bash
-~/.cache/kicad/9.0/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
+~/.cache/kicad/<kicad-version>/python-environments/com.github.advanced-zone-helper-ipc/bin/pip install kicad-python
 ```
 
-Alternatively, run the `setup_dependencies.py` script included in the plugin folder:
+Alternatively, run the `setup_dependencies.py` script included in the plugin folder. It auto-detects the KiCad version folder and repairs missing modules such as `kipy` or `wx`:
 ```bash
 python setup_dependencies.py
 ```
 
-If the virtual environment doesn't exist yet, run the plugin once from KiCad (it will fail but create the venv), then run the pip command above.
+For a specific missing module, you can pass it directly:
+```bash
+python setup_dependencies.py wx
+```
 
 ## How the Algorithm Works
 

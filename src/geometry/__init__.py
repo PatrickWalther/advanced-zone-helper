@@ -45,50 +45,31 @@ class Arc:
         Returns:
             (center, radius, start_angle_rad, end_angle_rad)
         """
-        # Calculate center from three points using perpendicular bisectors
+        # Calculate circumcenter from three points with a determinant form.
+        # This avoids slope-based divide-by-zero for horizontal/vertical chords.
         x1, y1 = self.start
         x2, y2 = self.mid
         x3, y3 = self.end
 
-        # Midpoints
-        mx1 = (x1 + x2) / 2
-        my1 = (y1 + y2) / 2
-        mx2 = (x2 + x3) / 2
-        my2 = (y2 + y3) / 2
+        d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))
+        if abs(d) < 1e-12:
+            # Collinear or nearly collinear points cannot define a stable circle.
+            raise ValueError("Degenerate arc: points are collinear")
 
-        # Slopes of chords
-        if abs(x2 - x1) < 1e-10:
-            # First chord is vertical
-            cx = mx1
-            if abs(x3 - x2) < 1e-10:
-                # Both vertical - degenerate case
-                cx = x1
-                cy = y1
-            else:
-                slope2 = (y3 - y2) / (x3 - x2)
-                perp_slope2 = -1 / slope2
-                cy = my2 + perp_slope2 * (cx - mx2)
-        elif abs(x3 - x2) < 1e-10:
-            # Second chord is vertical
-            cx = mx2
-            slope1 = (y2 - y1) / (x2 - x1)
-            perp_slope1 = -1 / slope1
-            cy = my1 + perp_slope1 * (cx - mx1)
-        else:
-            slope1 = (y2 - y1) / (x2 - x1)
-            slope2 = (y3 - y2) / (x3 - x2)
+        x1_sq_y1_sq = x1 * x1 + y1 * y1
+        x2_sq_y2_sq = x2 * x2 + y2 * y2
+        x3_sq_y3_sq = x3 * x3 + y3 * y3
 
-            if abs(slope1 - slope2) < 1e-10:
-                # Collinear points - degenerate arc
-                cx = (x1 + x3) / 2
-                cy = (y1 + y3) / 2
-            else:
-                perp_slope1 = -1 / slope1
-                perp_slope2 = -1 / slope2
-
-                # Intersection of perpendicular bisectors
-                cx = (perp_slope1 * mx1 - perp_slope2 * mx2 + my2 - my1) / (perp_slope1 - perp_slope2)
-                cy = my1 + perp_slope1 * (cx - mx1)
+        cx = (
+            x1_sq_y1_sq * (y2 - y3)
+            + x2_sq_y2_sq * (y3 - y1)
+            + x3_sq_y3_sq * (y1 - y2)
+        ) / d
+        cy = (
+            x1_sq_y1_sq * (x3 - x2)
+            + x2_sq_y2_sq * (x1 - x3)
+            + x3_sq_y3_sq * (x2 - x1)
+        ) / d
 
         # Calculate radius
         radius = math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2)
@@ -107,7 +88,7 @@ class Arc:
                 angle += 2 * math.pi
             return angle
 
-        mid_angle = normalize_angle(mid_angle, start_angle)
+        _ = normalize_angle(mid_angle, start_angle)
         end_angle = normalize_angle(end_angle, start_angle)
 
         return ((cx, cy), radius, start_angle, end_angle)

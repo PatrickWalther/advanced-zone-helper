@@ -5,7 +5,7 @@ import wx
 from typing import List, Optional
 from src.geometry import SimpleZone, RingZone, MultiHoleZone, LineSegment, Arc, Circle, Bezier
 from src.geometry.arc_approximator import ArcApproximator
-from src.geometry.zone_builder_ipc import ZoneSettings
+from src.geometry.zone_builder_ipc import ZoneSettings, ZoneBuilderIPC
 
 logger = logging.getLogger(__name__)
 
@@ -317,37 +317,21 @@ class ZoneDialogIPC(wx.Dialog):
         self.SetSizer(main_sizer)
 
     def _populate_layers(self):
-        """Populate layer choice with all layers, copper first."""
-        # Copper layers first (most common for zones)
-        copper_layers = [
-            "F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu",
-            "In5.Cu", "In6.Cu", "B.Cu"
-        ]
+        """Populate layer choice with all ZoneBuilder-supported layers."""
+        def sort_key(layer: str):
+            if layer == "F.Cu":
+                return (0, 0, layer)
+            if layer == "B.Cu":
+                return (0, 10_000, layer)
+            if layer.startswith("In") and layer.endswith(".Cu"):
+                try:
+                    num = int(layer[2:-3])
+                    return (0, num, layer)
+                except ValueError:
+                    pass
+            return (1, 0, layer)
 
-        # Technical layers
-        technical_layers = [
-            "F.Adhes", "B.Adhes",
-            "F.Paste", "B.Paste",
-            "F.SilkS", "B.SilkS",
-            "F.Mask", "B.Mask",
-            "Dwgs.User", "Cmts.User",
-            "Eco1.User", "Eco2.User",
-            "Edge.Cuts", "Margin",
-            "F.CrtYd", "B.CrtYd",
-            "F.Fab", "B.Fab",
-            "User.1", "User.2", "User.3", "User.4",
-            "User.5", "User.6", "User.7", "User.8", "User.9"
-        ]
-
-        # Add copper layers first
-        for layer in copper_layers:
-            self.layer_choice.Append(layer)
-
-        # Add separator
-        self.layer_choice.Append("─" * 20)
-
-        # Add technical layers
-        for layer in technical_layers:
+        for layer in sorted(ZoneBuilderIPC.LAYER_MAP.keys(), key=sort_key):
             self.layer_choice.Append(layer)
 
         self.layer_choice.SetSelection(0)

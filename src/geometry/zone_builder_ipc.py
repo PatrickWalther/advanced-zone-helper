@@ -383,10 +383,10 @@ class ZoneBuilderIPC:
             if hasattr(zone, 'priority'):
                 zone.priority = settings.priority
 
-            if hasattr(zone, 'clearance') and settings.clearance_mm:
+            if hasattr(zone, 'clearance') and settings.clearance_mm is not None:
                 zone.clearance = from_mm(settings.clearance_mm)
 
-            if hasattr(zone, 'min_thickness') and settings.min_thickness_mm:
+            if hasattr(zone, 'min_thickness') and settings.min_thickness_mm is not None:
                 zone.min_thickness = from_mm(settings.min_thickness_mm)
 
             if hasattr(zone, 'name'):
@@ -411,12 +411,12 @@ class ZoneBuilderIPC:
             logger.debug("Adding zone to board via create_items()")
             result = self.board.create_items(zone)
 
-            if result:
+            if not self._create_items_indicates_failure(result):
                 logger.info("Zone created successfully via IPC API")
                 return True
-            else:
-                logger.warning("create_items() returned empty/None result")
-                return False
+
+            logger.warning(f"create_items() indicated failure (result={result!r})")
+            return False
 
         except ImportError as e:
             logger.error(f"Failed to import IPC API classes: {e}")
@@ -425,3 +425,29 @@ class ZoneBuilderIPC:
         except Exception as e:
             logger.error(f"Error creating zone via IPC: {e}", exc_info=True)
             return False
+
+    def _create_items_indicates_failure(self, result) -> bool:
+        """Interpret create_items() return across kipy API variants.
+
+        Some versions return None/empty payloads even when creation succeeds.
+        Treat only explicit failure indicators as failure.
+        """
+        if isinstance(result, bool):
+            return not result
+
+        if result is None:
+            return False
+
+        if hasattr(result, "success"):
+            try:
+                return not bool(result.success)
+            except Exception:
+                return False
+
+        if hasattr(result, "ok"):
+            try:
+                return not bool(result.ok)
+            except Exception:
+                return False
+
+        return False

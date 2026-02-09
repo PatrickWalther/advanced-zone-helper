@@ -1,6 +1,6 @@
 [project]
 name = "advanced-zone-helper-ipc"
-version = "2.0.0"
+version = "2.0.2"
 description = "KiCad IPC plugin for creating zones from shapes"
 requires-python = ">=3.9"
 dependencies = ["kicad-python>=0.1.0"]
